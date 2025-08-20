@@ -1,0 +1,70 @@
+---
+- hosts: servers
+  become: true
+
+  vars:
+    golang_version: 1.25.0
+
+  tasks:
+
+    - name: "Update and upgrade apt"
+      apt:
+        upgrade: dist
+        update_cache: true
+
+    - name: "Install git"
+      apt:
+        name: git
+        state: latest
+
+    - name: "Download golang"
+      ansible.builtin.get_url:
+        url: "https://golang.org/dl/go{{ golang_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/go{{ golang_version }}.tar.gz"
+        mode: "0644"
+
+    - name: "Extract Golang"
+      ansible.builtin.unarchive:
+        src: "/tmp/go{{ golang_version }}.tar.gz"
+        dest: "/usr/local"
+        remote_src: true
+        owner: root
+        group: root
+
+    - name: Add GO to System path
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        line: "export PATH=$PATH:/usr/local/go/bin"
+        state: present
+        create: true
+
+    - name: Set GOPATH
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        line: "export GOPATH=$HOME/go"
+        state: present
+
+    - name: Apply changes
+      ansible.builtin.command:
+        argv:
+          - /bin/bash
+          - -c
+          - "source /etc/profile"
+      changed_when: false
+
+    - name: Verify Git installation
+      ansible.builtin.command: git --version
+      register: git_version
+      changed_when: false
+
+    - name: Verify Go installation
+      ansible.builtin.command: go version
+      register: go_version
+      changed_when: false
+
+    - name: Show results
+      ansible.builtin.debug:
+        msg:
+          - "Git version: {{ git_version.stdout }}"
+          - "Go version: {{ go_version.stdout }}"
+...
