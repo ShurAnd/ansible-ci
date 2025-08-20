@@ -17,6 +17,29 @@
         name: git
         state: latest
 
+    - name: Get current GO version
+      command: go version
+      register: current_go_version
+      ignore_errors: true
+      changed_when: false
+
+    - name: Set fact if GO needs update
+      set_fact:
+        go_needs_update: "{{ current_go_version is failed or golang_version not in current_go_version.stdout }}"
+
+    - name: Debug version info
+      debug:
+        msg:
+          - "Current version: {{ current_go_version.stdout }}"
+          - "Target version: go{{ golang_version }}"
+      when: go_needs_update
+
+    - name: Remove existing Go installation
+      file:
+        path: "/usr/local/go"
+        state: absent
+      when: go_needs_update
+
     - name: "Download golang"
       get_url:
         url: "https://golang.org/dl/go{{ golang_version }}.linux-amd64.tar.gz"
@@ -33,11 +56,14 @@
 
     - name: Create symlink for GO
       file:
-        path: /usr/bin/go
-        src: /usr/local/go/bin/go
+        path: /usr/bin/{{ item }}
+        src: /usr/local/go/bin/{{ item }}
         state: link
         owner: root
         group: root
+      loop:
+        - go
+        - gofmt
 
     - name: Set GOPATH
       lineinfile:
