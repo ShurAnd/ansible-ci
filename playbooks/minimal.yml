@@ -2,17 +2,17 @@
 - hosts: servers
   become: true
 
-  vars:
-    golang_version: 1.25.0
+  vars_files:
+    vars/main-soft-versions.yml
 
   tasks:
 
-    - name: "Update and upgrade apt"
+    - name: Update and upgrade apt
       apt:
         upgrade: dist
         update_cache: true
 
-    - name: "Install git"
+    - name: Install git
       apt:
         name: git
         state: latest
@@ -40,19 +40,28 @@
         state: absent
       when: go_needs_update
 
-    - name: "Download golang"
+    - name: Download golang
       get_url:
         url: "https://golang.org/dl/go{{ golang_version }}.linux-amd64.tar.gz"
         dest: "/tmp/go{{ golang_version }}.tar.gz"
         mode: "0644"
+      register: go_download_result
+      when: go_needs_update
 
-    - name: "Extract Golang"
+    - name: Extract Golang
       unarchive:
         src: "/tmp/go{{ golang_version }}.tar.gz"
         dest: "/usr/local"
         remote_src: true
         owner: root
         group: root
+      when: go_download_result.changed
+
+    - name: Cleanup archive
+      file:
+        path: "/tmp/go{{ golang_version }}.tar.gz"
+        state: absent
+      when: go_download_result.changed
 
     - name: Create symlink for GO
       file:
@@ -64,6 +73,7 @@
       loop:
         - go
         - gofmt
+      when: go_needs_update
 
     - name: Set GOPATH
       lineinfile:
