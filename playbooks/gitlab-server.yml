@@ -1,0 +1,47 @@
+---
+- hosts: gitlab-servers
+  become: true
+
+  vars_files:
+    vars/gitlab-required.yml
+
+  tasks:
+
+    - name: Update and upgrade apt
+      apt:
+        upgrade: dist
+        update_cache: true
+
+    - name: Install prerequired soft
+      apt:
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - curl
+        - openssh-server
+        - ca-certificates
+
+    - name: Create tmp directory
+      file:
+        path: "/tmp/gitlab"
+        state: directory
+
+    - name: Download script for official repository of GitLab
+      get_url:
+        url: "https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh"
+        dest: "/tmp/gitlab/script.deb.sh"
+        mode: "0644"
+
+    - name: Add official repo of GitLab
+      command:
+        argv:
+          - /bin/bash
+          - -c
+          - "/tmp/gitlab/script.deb.sh"
+
+#Add external url for gitlab
+    - name: Install gitlab-ee
+      apt:
+        name: gitlab-ee
+        state: latest
+...

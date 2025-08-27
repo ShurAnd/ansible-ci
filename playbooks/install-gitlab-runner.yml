@@ -1,0 +1,31 @@
+---
+- hosts: gitlab-runners
+  become: true
+
+  vars_files:
+    vars/gitlab-runners.yml
+
+  tasks:
+
+    - name: Add GPG key for Gitlab Runner
+      apt_key:
+        url: https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+        state: present
+
+    - name: Add Gitlab Runner reposiory
+      apt_repository:
+        repo: "deb [arch=amd64] https://packages.gitlab.com/runner/gitlab-runner/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} main"
+        state: present
+        filename: gitlab-runner
+
+    - name: Update apt cache
+      apt:
+        upgrade: dist
+        update_cache: true
+
+
+    - name: Install gitlab runner
+      apt:
+        name: gitlab-runner
+        state: latest
+...
